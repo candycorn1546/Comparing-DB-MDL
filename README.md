@@ -25,7 +25,7 @@
    
   ### 2. ScatterPlot
   <img width="1512" alt="Screenshot 2024-03-03 at 10 01 04 AM" src="https://github.com/candycorn1546/Comparing-DB-MDL/assets/157404986/7236ea33-e5d1-4dc2-893e-ca5c940efb5c"> <br>
-    The scatterplot represents the rating when compared to the number of raters. The points on the plot are colour-orientated by a website, with orange being Douban and blue being MDL. If you click on an orange dot, it will redirect to the website URL with Douban or MDL, depending on the user's selection.
+    The scatterplot represents the rating when compared to the number of raters. The points on the plot are colour-orientated by a website, with orange being Douban and blue being MDL. If you click on a dot, it will redirect to the website URL with Douban or MDL, depending on the user's selection.
    <br> <br><br> 
 
   ### 3. Line Plot
