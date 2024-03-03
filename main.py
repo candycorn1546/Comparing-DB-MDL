@@ -1,41 +1,40 @@
+from webbrowser import open_new_tab
+
 import dash
 from dash import dcc, html
+from dash.dependencies import Input, Output, State
 import plotly.graph_objs as go
 import pandas as pd
 from dash.dash_table import DataTable
 
-
-# Read data from CSV
-df = pd.read_csv('Final.csv')
-
-# Calculate the difference in ratings
-df['Difference in Ratings'] = df['Rating_mdl'] - df['Rating_douban']
-df['Absolute Difference in Ratings'] = round(df['Difference in Ratings'].abs(), 3)
-df['Difference in Number of Raters'] = df['Number of Raters_mdl'] - df['Number of Raters_douban']
-df['Absolute Difference in Number of Raters'] = round(df['Difference in Number of Raters'].abs(),2)
-
-# Get unique year
-title = f"Datas between MyDramaList and Douban"
-
+title = f"Datas between MyDramaList and Douban" # Title of the webpage
 app = dash.Dash(__name__, external_stylesheets=['https://fonts.googleapis.com/css2?family=Coming+Soon&display=swap'])
 
-def filter_data(query):
-    if query:
-        return df[df['English Title'].str.contains(query, case=False)]
-    else:
-        return df
+df = pd.read_csv('Final.csv') # read the csv file
 
-# App layout
-# Group data by year and calculate average ratings for MyDramaList and Douban
-average_ratings = df.groupby('Year').agg({
+df['Difference in Ratings'] = df['Rating_mdl'] - df['Rating_douban'] # difference in ratings
+df['Absolute Difference in Ratings'] = round(df['Difference in Ratings'].abs(), 3) # absolute difference in ratings
+df['Difference in Number of Raters'] = df['Number of Raters_mdl'] - df['Number of Raters_douban'] # difference in number of raters
+df['Absolute Difference in Number of Raters'] = round(df['Difference in Number of Raters'].abs(), 2) # absolute difference in number of raters
+
+
+def filter_data(query): # function to filter the data
+    if query: # if query is not empty
+        return df[df.apply(lambda row: any(query.lower() in str(cell).lower() for cell in row), axis=1)] # filter the data
+    else:
+        return df # return the original data
+
+
+average_ratings = df.groupby('Year').agg({ # group by year
     'Rating_mdl': 'mean',
     'Rating_douban': 'mean'
 }).reset_index()
 
+app.layout = html.Div(children=[ # layout of the webpage
 
-app.layout = html.Div(children=[
-    # Title
-    html.H1(children=title,
+    html.Div(id='url', style={'display': 'none'}), # hidden div to open the URL in a new tab
+
+    html.H1(children=title,     # Title of the webpage
             style={'font-family': 'Coming Soon, cursive', 'text-align': 'center', 'margin-top': '20px',
                    'margin-bottom': '20px'}),
 
@@ -49,7 +48,7 @@ app.layout = html.Div(children=[
         ),
         html.I(className="fas fa-search",
                style={'position': 'relative', 'left': '-30px', 'top': '5px', 'color': '#aaa'})
-    ], style={'position': 'relative'}),
+    ], style={'position': 'relative'}), # Relative position for search icon
 
     # DataTable
     html.Div(id='table-container'),
@@ -91,9 +90,9 @@ app.layout = html.Div(children=[
         )
     ]),
 
-    html.Div(style={'margin-top': '100px'}),
+    html.Div(style={'margin-top': '100px'}), # Add some space
 
-    # Line plot for Trend Analysis
+    # Line plot for trend analysis
     html.Div([
         dcc.Graph(
             id='trend-analysis-line',
@@ -126,20 +125,13 @@ app.layout = html.Div(children=[
     ])
 ])
 
-# Your callback function and app.run_server() call remain the same
-
-# Your callback function and app.run_server() call remain the same
-
-# Your callback function and app.run_server() call remain the same
-
-
-
 
 # Callback to update DataTable based on search query
 @app.callback(
-    dash.dependencies.Output('table-container', 'children'),
-    [dash.dependencies.Input('search-input', 'value')]
+    Output('table-container', 'children'),
+    [Input('search-input', 'value')]
 )
+# Update the table based on search query
 def update_table(search_query):
     filtered_df = filter_data(search_query)
     return DataTable(
@@ -148,10 +140,10 @@ def update_table(search_query):
             {'name': 'Title', 'id': 'English Title'},
             {'name': 'Native Title', 'id': 'Native Title'},
             {'name': 'Country', 'id': 'Country'},
-            {'name': 'Rating_mdl', 'id': 'Rating_mdl'},
-            {'name': 'Number of Raters_mdl', 'id': 'Number of Raters_mdl'},
-            {'name': 'Rating_douban', 'id': 'Rating_douban'},
-            {'name': 'Number of Raters_douban', 'id': 'Number of Raters_douban'},
+            {'name': 'MDL Rating', 'id': 'Rating_mdl'},
+            {'name': 'MDL Number of Raters', 'id': 'Number of Raters_mdl'},
+            {'name': 'Douban Rating', 'id': 'Rating_douban'},
+            {'name': 'Douban Number of Raters', 'id': 'Number of Raters_douban'},
             {'name': 'Difference in Ratings', 'id': 'Absolute Difference in Ratings'},  # New column
             {'name': 'Difference in Number of Raters', 'id': 'Absolute Difference in Number of Raters'}  # New column
         ],
@@ -176,6 +168,27 @@ def update_table(search_query):
         ],
         tooltip_duration=None  # Display tooltip indefinitely
     )
+
+
+@app.callback(
+    Output('url', 'children'),
+    [Input('rating-vs-raters-scatter', 'clickData')]
+)
+def display_click_data(clickData):
+    if clickData:
+        point_index = clickData['points'][0]['pointIndex']
+        source = clickData['points'][0]['curveNumber']
+        if source == 1:
+            english_title = df.iloc[point_index]['English Title']
+            douban_id = df[df['English Title'] == english_title]['ID'].iloc[0]
+            if douban_id:
+                url = f"https://movie.douban.com/subject/{douban_id}/"
+                return open_new_tab(url)
+        else:
+            english_title = df.iloc[point_index]['English Title']
+            url = df[df['English Title'] == english_title]['URL'].iloc[0]
+            return open_new_tab(url)
+
 
 if __name__ == '__main__':
     app.run_server(debug=True)
